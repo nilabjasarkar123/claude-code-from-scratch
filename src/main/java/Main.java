@@ -63,7 +63,7 @@ public class Main {
             throw new RuntimeException("no choices in response");
         }
 
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
+        // we can use print statements as follows for debugging, they'll be visible when running tests.
         System.err.println("Logs from your program will appear here!");
 
         // TODO: Uncomment the line below to pass the first stage
