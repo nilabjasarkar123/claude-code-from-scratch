@@ -9,6 +9,9 @@ public class ReadFileTool {
     @JsonProperty("file_path")
     public String filePath;
 
-    // Read tool specification
+    // Tool name: Read
+
+    //Purpose: read and return a file's contents
+    //Required argument: file_path (a string)
 
 }
