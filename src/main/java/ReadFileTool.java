@@ -26,6 +26,7 @@ public class ReadFileTool {
         if (!Files.isRegularFile(path)) {
             throw new IOException("File not found: " + filePath);
         }
+        System.out.println("Reading file: " + Files.readString(path));
         return Files.readString(path);
     }
 
