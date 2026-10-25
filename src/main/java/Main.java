@@ -1,3 +1,4 @@
+
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.core.JsonValue;
@@ -5,12 +6,13 @@ import com.openai.models.FunctionDefinition;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionTool;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (args.length < 2 || !"-p".equals(args[0])) {
             System.err.println("Usage: program -p <prompt>");
             System.exit(1);
@@ -20,6 +22,7 @@ public class Main {
 
         String apiKey = System.getenv("OPENROUTER_API_KEY");
         String baseUrl = System.getenv("OPENROUTER_BASE_URL");
+
         if (baseUrl == null || baseUrl.isEmpty()) {
             baseUrl = "https://openrouter.ai/api/v1";
         }
@@ -33,40 +36,63 @@ public class Main {
                 .baseUrl(baseUrl)
                 .build();
 
-        ChatCompletion response = client.chat().completions().create(
+        ChatCompletionTool readTool = ChatCompletionTool.builder()
+                .function(
+                        FunctionDefinition.builder()
+                                .name("Read")
+                                .description(
+                                        "Read and return the contents of a file")
+                                .parameters(
+                                        JsonValue.from(Map.of(
+                                                "type", "object",
+                                                "properties", Map.of(
+                                                        "file_path", Map.of(
+                                                                "type", "string",
+                                                                "description",
+                                                                "The path to the file to read"
+                                                        )
+                                                ),
+                                                "required", List.of("file_path")
+                                        ))
+                                )
+                                .build()
+                )
+                .build();
+
+        ChatCompletionCreateParams.Builder params =
                 ChatCompletionCreateParams.builder()
                         .model("anthropic/claude-haiku-4.5")
                         .addUserMessage(prompt)
-                        .addTool(ChatCompletionTool.builder()
-                                .function(
-                                        FunctionDefinition.builder()
-                                                .name("Read")
-                                                .description("Read and return the contents of a file")
-                                                .parameters(
-                                                        JsonValue.from(Map.of(
-                                                                "type", "object",
-                                                                "properties", Map.of(
-                                                                        "file_path", Map.of(
-                                                                                "type", "string",
-                                                                                "description", "The path to the file to read"
-                                                                        )
-                                                                ),
-                                                                "required", List.of("file_path")
-                                                        ))
-                                                )
-                                                .build()
-                                )
-                                .build())
-                        .build()
-        );
+                        .addTool(readTool);
+
+        ChatCompletion response =
+                client.chat().completions().create(params.build());
+
         if (response.choices().isEmpty()) {
-            throw new RuntimeException("no choices in response");
+            throw new RuntimeException("No choices in response");
         }
 
-        // we can use print statements as follows for debugging, they'll be visible when running tests.
-        System.err.println("Logs from your program will appear here!");
+        var message = response.choices().get(0).message();
 
-        // TODO: Uncomment the line below to pass the first stage
-        System.out.print(response.choices().get(0).message().content().orElse(""));
+        // TODO: Inspect the assistant message's tool calls.
+        // For each Read call:
+        // 1. Parse its JSON arguments into ReadFileTool.
+        String argumentsJson = toolCall.function().arguments();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        ReadFileTool readToolVal = objectMapper.readValue(
+                argumentsJson,
+                ReadFileTool.class
+        );
+
+        String contents = readToolVal.execute();
+
+        // 2. Call execute() to read the file.
+        // 3. Append the assistant message and tool result to params.
+        // 4. Call the model again with params.build().
+        // 5. Print the final response, not the initial tool-call message.
+
+        System.out.print(message.content().orElse(""));
     }
 }
