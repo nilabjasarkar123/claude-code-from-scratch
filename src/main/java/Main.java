@@ -77,16 +77,25 @@ public class Main {
         // TODO: Inspect the assistant message's tool calls.
         // For each Read call:
         // 1. Parse its JSON arguments into ReadFileTool.
+        var toolCalls = message.toolCalls().orElse(List.of());
+
+        if (toolCalls.isEmpty()) {
+            System.out.print(message.content().orElse(""));
+            return;
+        }
+
+        var toolCall = toolCalls.get(0);
+
         String argumentsJson = toolCall.function().arguments();
 
         ObjectMapper objectMapper = new ObjectMapper();
 
-        ReadFileTool readToolVal = objectMapper.readValue(
+        ReadFileTool readFileTool = objectMapper.readValue(
                 argumentsJson,
                 ReadFileTool.class
         );
 
-        String contents = readToolVal.execute();
+        String contents = readFileTool.execute();
 
         // 2. Call execute() to read the file.
         // 3. Append the assistant message and tool result to params.
