@@ -7,6 +7,7 @@ import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
 
 import java.util.List;
 import java.util.Map;
@@ -102,6 +103,30 @@ public class Main {
         // 4. Call the model again with params.build().
         // 5. Print the final response, not the initial tool-call message.
 
-        System.out.print(message.content().orElse(""));
+        // Preserve the assistant message containing the tool call.
+        params.addMessage(message);
+
+        // Return the file contents as the tool result.
+        params.addMessage(
+                ChatCompletionToolMessageParam.builder()
+                        .toolCallId(toolCall.id())
+                        .content(contents)
+                        .build()
+        );
+
+        // Ask the model to respond using the file contents.
+        ChatCompletion finalResponse =
+                client.chat().completions().create(params.build());
+
+        if (finalResponse.choices().isEmpty()) {
+            throw new RuntimeException("No choices in final response");
+        }
+
+        System.out.print(
+                finalResponse.choices().get(0)
+                        .message()
+                        .content()
+                        .orElse("")
+        );
     }
 }
